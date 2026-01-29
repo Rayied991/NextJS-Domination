@@ -355,3 +355,25 @@ All these great optimizations and features come right out of the box with Next.j
 **Last Updated:** January 2026  
 **Next.js Version:** 15.x  
 **React Version:** 19.x
+
+
+installation:
+```
+npx create-next-app@latest
+```
+
+new feature in nextjs16:
+turbopack file system caching:
+which allows for significantly faster compile time across restarts.All internal vercel apps are already using this feature.
+
+to use it:
+next.config.ts:
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  experimental:{
+    turbopackFileSystemCacheForDev: true,
+  }
+};
+
+export default nextConfig;
