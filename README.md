@@ -27,6 +27,21 @@ Next.js simplifies the development process and optimizes applications by providi
 - Improved initial page load performance
 - Direct access to backend resources (databases, file systems)
 
+**Understanding Server Components:**
+Since they are rendered on the server, they can access server-side resources directly (databases, file systems). This helps to reduce the amount of JavaScript sent to the client, improving performance. Server components are excellent when you need direct access to server-side resources like accessing files in a file system or when you want to keep sensitive information (such as access tokens and other keys) safe on the server.
+
+**Understanding Client Components:**
+Client components are rendered on the client side (browser). To use them in Next.js, you must add a `'use client'` directive at the top of the component.
+
+Client components are pre-rendered on the server side to create a static shell and then hydrated on the client side. This means everything within the client component that doesn't require interactivity or isn't dependent on the browser is still rendered on the server. The code or parts that rely on the browser or require interactivity are left as placeholders during server-side pre-rendering. When they reach the client, the browser then renders the client components and fills in the placeholders left by the server.
+
+**When to Use Each:**
+- **Server Components** (default): Use for data fetching, accessing backend resources, keeping sensitive information on server
+- **Client Components** (`'use client'`): Use when you need browser interactivity (clicking buttons, navigating, submitting forms, using hooks like `useState`, `useEffect`)
+
+**Best Practice:**
+Leave components as server-side components until you need browser interactivity, at which point you'll most likely get an error, then you can add the `'use client'` directive at the top.
+
 ---
 
 ### 2. Advanced Rendering Strategies
@@ -1009,7 +1024,7 @@ app/
 ├── loading.tsx             # Loading UI
 ├── error.tsx               # Error handling
 ├── not-found.tsx           # 404 page
-├── global.css              # Global styles
+├── globals.css             # Global styles
 │
 ├── about/
 │   └── page.tsx            # /about
@@ -1598,8 +1613,143 @@ npm run lint                        # Run ESLint
 - File-based routing in `app/` directory
 - Special files: `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`
 
+### Component Decision Flow
+```
+Need browser interactivity? (onClick, useState, etc.)
+├─ YES → Use Client Component ('use client')
+└─ NO  → Use Server Component (default)
+```
+
 ---
 
 **Last Updated:** January 2026  
 **Next.js Version:** 15.x  
 **React Version:** 19.x
+
+
+```mermaid
+flowchart TD
+    Start([Creating a Component]) --> Question1{Does it need<br/>browser interactivity?}
+    
+    Question1 --> |YES| Interactive{What kind of<br/>interactivity?}
+    Question1 --> |NO| ServerComp[✅ Server Component<br/>DEFAULT - No directive needed]
+    
+    Interactive --> Events[Event Handlers<br/>onClick, onChange, onSubmit]
+    Interactive --> Hooks[React Hooks<br/>useState, useEffect, useContext]
+    Interactive --> Browser[Browser APIs<br/>localStorage, window, document]
+    
+    Events --> ClientComp[✅ Client Component<br/>Add 'use client' at top]
+    Hooks --> ClientComp
+    Browser --> ClientComp
+    
+    ServerComp --> ServerBenefits[Benefits:<br/>✓ Smaller bundle size<br/>✓ Access databases directly<br/>✓ Read file system<br/>✓ Keep secrets secure<br/>✓ Better SEO]
+    
+    ClientComp --> ClientBenefits[Benefits:<br/>✓ Interactive UI<br/>✓ Use React hooks<br/>✓ Handle user events<br/>✓ Access browser APIs<br/>✓ Real-time updates]
+    
+    ServerBenefits --> ServerExamples[Examples:<br/>• Fetching data from DB<br/>• Reading server files<br/>• Static content<br/>• Blog posts<br/>• Product listings]
+    
+    ClientBenefits --> ClientExamples[Examples:<br/>• Forms with validation<br/>• Search with autocomplete<br/>• Shopping cart<br/>• Interactive charts<br/>• Real-time chat]
+    
+    ServerExamples --> Tip[💡 TIP: Start with Server Component<br/>Switch to Client Component only when needed]
+    ClientExamples --> Tip
+    
+    Tip --> End([Component Created!])
+    
+    style Start fill:#e1f5e1
+    style End fill:#e1f5e1
+    style ServerComp fill:#ffe1e1
+    style ClientComp fill:#e1e1ff
+    style Tip fill:#fff3cd
+```
+
+```mermaid
+graph TB
+    subgraph "Next.js Rendering Strategies"
+        Start([Choose Rendering Strategy]) --> Decision{Content Type?}
+        
+        Decision --> Static{Rarely changes?<br/>Can pre-build?}
+        Decision --> Dynamic{Changes frequently?<br/>User-specific?}
+        Decision --> SemiStatic{Updates occasionally?<br/>After deployment?}
+        Decision --> Interactive{Highly interactive?<br/>Real-time?}
+        
+        Static --> SSG[SSG - Static Site Generation]
+        Dynamic --> SSR[SSR - Server-Side Rendering]
+        SemiStatic --> ISR[ISR - Incremental Static Regeneration]
+        Interactive --> CSR[CSR - Client-Side Rendering]
+    end
+    
+    subgraph "SSG Details"
+        SSG --> SSG1[When: Build Time]
+        SSG1 --> SSG2[How: Pre-render all pages]
+        SSG2 --> SSG3[Cache: Forever until rebuild]
+        SSG3 --> SSG4[Use Cases:<br/>• Blogs<br/>• Documentation<br/>• Marketing pages<br/>• Landing pages]
+        SSG4 --> SSG5[Code Example:<br/>cache: 'force-cache']
+        SSG5 --> SSGPros[Pros: ⚡ Fastest<br/>✓ Best SEO<br/>✓ CDN cacheable]
+        SSGPros --> SSGCons[Cons: ⚠️ No dynamic data<br/>⚠️ Must rebuild for updates]
+    end
+    
+    subgraph "SSR Details"
+        SSR --> SSR1[When: Every Request]
+        SSR1 --> SSR2[How: Server renders on demand]
+        SSR2 --> SSR3[Cache: None or short-lived]
+        SSR3 --> SSR4[Use Cases:<br/>• Dashboards<br/>• User profiles<br/>• Personalized content<br/>• News feeds]
+        SSR4 --> SSR5[Code Example:<br/>cache: 'no-store']
+        SSR5 --> SSRPros[Pros: ✓ Always fresh<br/>✓ User-specific<br/>✓ SEO-friendly]
+        SSRPros --> SSRCons[Cons: ⚠️ Slower TTFB<br/>⚠️ Server load]
+    end
+    
+    subgraph "ISR Details"
+        ISR --> ISR1[When: Build + Background Updates]
+        ISR1 --> ISR2[How: Regenerate after interval]
+        ISR2 --> ISR3[Cache: Until revalidation time]
+        ISR3 --> ISR4[Use Cases:<br/>• E-commerce products<br/>• News sites<br/>• Social media feeds<br/>• Updated content]
+        ISR4 --> ISR5[Code Example:<br/>revalidate: 3600]
+        ISR5 --> ISRPros[Pros: ✓ Best of both worlds<br/>✓ Fast + Fresh<br/>✓ CDN cacheable]
+        ISRPros --> ISRCons[Cons: ⚠️ Slightly stale data<br/>⚠️ More complex]
+    end
+    
+    subgraph "CSR Details"
+        CSR --> CSR1[When: In Browser]
+        CSR1 --> CSR2[How: JavaScript renders]
+        CSR2 --> CSR3[Cache: Handled by client]
+        CSR3 --> CSR4[Use Cases:<br/>• Interactive dashboards<br/>• Real-time apps<br/>• Charts/graphs<br/>• Client-only features]
+        CSR4 --> CSR5[Code Example:<br/>'use client' + useEffect]
+        CSR5 --> CSRPros[Pros: ✓ Highly interactive<br/>✓ Real-time updates<br/>✓ Rich UX]
+        CSRPros --> CSRCons[Cons: ⚠️ Poor SEO<br/>⚠️ Slower initial load<br/>⚠️ Large bundle]
+    end
+    
+    SSGCons --> Compare[Compare Performance]
+    SSRCons --> Compare
+    ISRCons --> Compare
+    CSRCons --> Compare
+    
+    Compare --> Metrics{Performance Metrics}
+    
+    Metrics --> Speed[Speed Ranking:<br/>1️⃣ SSG Fastest<br/>2️⃣ ISR Fast<br/>3️⃣ SSR Medium<br/>4️⃣ CSR Slowest initial]
+    
+    Metrics --> SEO[SEO Ranking:<br/>1️⃣ SSG/ISR Best<br/>2️⃣ SSR Good<br/>3️⃣ CSR Poor]
+    
+    Metrics --> Fresh[Freshness Ranking:<br/>1️⃣ SSR Always fresh<br/>2️⃣ CSR Real-time<br/>3️⃣ ISR Periodic<br/>4️⃣ SSG Stale until rebuild]
+    
+    Speed --> Recommendation
+    SEO --> Recommendation
+    Fresh --> Recommendation
+    
+    Recommendation{💡 Best Practice}
+    
+    Recommendation --> Hybrid[Use Hybrid Approach:<br/>SSG for static pages<br/>ISR for semi-dynamic<br/>SSR for user-specific<br/>CSR for interactive parts]
+    
+    Hybrid --> Example[Example App:<br/>• Homepage → SSG<br/>• Product pages → ISR<br/>• User dashboard → SSR<br/>• Live chat widget → CSR]
+    
+    Example --> End([Choose Based on Needs])
+    
+    style Start fill:#e1f5e1
+    style End fill:#e1f5e1
+    style SSG fill:#d4edda
+    style SSR fill:#fff3cd
+    style ISR fill:#cfe2ff
+    style CSR fill:#f8d7da
+    style Hybrid fill:#e1f5e1
+```
+
+
