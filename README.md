@@ -1625,6 +1625,7 @@ Need browser interactivity? (onClick, useState, etc.)
 **Last Updated:** January 2026  
 **Next.js Version:** 15.x  
 **React Version:** 19.x
+
 # Next.js 16 - Complete Routing & Layouts Guide
 
 ## React Compiler Support (Stable)
@@ -2290,6 +2291,1066 @@ export default async function Posts() {
 
 ---
 
+## API Routes
+
+API Routes allow you to create **backend endpoints** within your Next.js application. All API routes are created inside the `/app/api` folder.
+
+### Folder Structure
+```
+/app
+  /api
+    db.ts                    → Database connection helper
+    /books
+      route.ts              → /api/books endpoint
+      /[id]
+        route.ts            → /api/books/[id] dynamic endpoint
+```
+
+### Creating API Routes
+
+API routes use a special file called `route.ts` (or `route.js`) and export HTTP method handlers.
+
+---
+
+### Basic GET API Route
+
+**File:** `/app/api/books/route.ts`
+```tsx
+import { NextResponse } from 'next/server'
+
+// GET /api/books
+export async function GET() {
+  const books = [
+    { id: 1, title: 'The Great Gatsby', author: 'F. Scott Fitzgerald' },
+    { id: 2, title: '1984', author: 'George Orwell' },
+    { id: 3, title: 'To Kill a Mockingbird', author: 'Harper Lee' }
+  ]
+
+  return NextResponse.json(books)
+}
+```
+
+**Access:** `http://localhost:3000/api/books`
+
+---
+
+### POST API Route
+
+**File:** `/app/api/books/route.ts`
+```tsx
+import { NextResponse } from 'next/server'
+
+// POST /api/books
+export async function POST(request: Request) {
+  const body = await request.json()
+  
+  // Add your logic here (e.g., save to database)
+  const newBook = {
+    id: Date.now(),
+    ...body
+  }
+
+  return NextResponse.json(newBook, { status: 201 })
+}
+```
+
+---
+
+### Dynamic API Routes
+
+**File:** `/app/api/books/[id]/route.ts`
+```tsx
+import { NextResponse } from 'next/server'
+
+// GET /api/books/[id]
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  
+  // Fetch book by ID from database
+  const book = {
+    id,
+    title: 'Sample Book',
+    author: 'Sample Author'
+  }
+
+  return NextResponse.json(book)
+}
+
+// PUT /api/books/[id]
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const body = await request.json()
+
+  // Update book in database
+  const updatedBook = {
+    id,
+    ...body
+  }
+
+  return NextResponse.json(updatedBook)
+}
+
+// DELETE /api/books/[id]
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+
+  // Delete book from database
+  
+  return NextResponse.json({ message: 'Book deleted', id })
+}
+```
+
+---
+
+### Database Connection Helper
+
+**File:** `/app/api/db.ts`
+```tsx
+import { PrismaClient } from '@prisma/client'
+
+// Prevent multiple instances in development
+const globalForPrisma = global as unknown as { prisma: PrismaClient }
+
+export const prisma = globalForPrisma.prisma || new PrismaClient()
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma
+}
+```
+
+---
+
+### Complete API Example with Database
+
+**File:** `/app/api/books/route.ts`
+```tsx
+import { NextResponse } from 'next/server'
+import { prisma } from '../db'
+
+// GET all books
+export async function GET() {
+  try {
+    const books = await prisma.book.findMany()
+    return NextResponse.json(books)
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to fetch books' },
+      { status: 500 }
+    )
+  }
+}
+
+// POST create new book
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    
+    const newBook = await prisma.book.create({
+      data: {
+        title: body.title,
+        author: body.author,
+      }
+    })
+
+    return NextResponse.json(newBook, { status: 201 })
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to create book' },
+      { status: 500 }
+    )
+  }
+}
+```
+
+**File:** `/app/api/books/[id]/route.ts`
+```tsx
+import { NextResponse } from 'next/server'
+import { prisma } from '../../db'
+
+// GET single book
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    
+    const book = await prisma.book.findUnique({
+      where: { id: parseInt(id) }
+    })
+
+    if (!book) {
+      return NextResponse.json(
+        { error: 'Book not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(book)
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to fetch book' },
+      { status: 500 }
+    )
+  }
+}
+
+// PUT update book
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const body = await request.json()
+
+    const updatedBook = await prisma.book.update({
+      where: { id: parseInt(id) },
+      data: body
+    })
+
+    return NextResponse.json(updatedBook)
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to update book' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE book
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+
+    await prisma.book.delete({
+      where: { id: parseInt(id) }
+    })
+
+    return NextResponse.json({ message: 'Book deleted successfully' })
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to delete book' },
+      { status: 500 }
+    )
+  }
+}
+```
+
+---
+
+## Using API Routes in UI Components
+
+### Client Component Example
+
+**File:** `/app/books/page.tsx`
+```tsx
+'use client'
+
+import { useEffect, useState } from 'react'
+
+interface Book {
+  id: number
+  title: string
+  author: string
+}
+
+export default function BooksPage() {
+  const [books, setBooks] = useState<Book[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Fetch from your API route
+    fetch('/api/books')
+      .then(res => res.json())
+      .then(data => {
+        setBooks(data)
+        setLoading(false)
+      })
+      .catch(error => {
+        console.error('Error fetching books:', error)
+        setLoading(false)
+      })
+  }, [])
+
+  if (loading) return <div>Loading...</div>
+
+  return (
+    <div>
+      <h1>Books</h1>
+      <ul>
+        {books.map(book => (
+          <li key={book.id}>
+            <strong>{book.title}</strong> by {book.author}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+---
+
+### Server Component Example (Recommended)
+
+**File:** `/app/books/page.tsx`
+```tsx
+// Server Component - fetch directly without API route
+import { prisma } from '../api/db'
+
+export default async function BooksPage() {
+  // Direct database call - no API needed!
+  const books = await prisma.book.findMany()
+
+  return (
+    <div>
+      <h1>Books</h1>
+      <ul>
+        {books.map(book => (
+          <li key={book.id}>
+            <strong>{book.title}</strong> by {book.author}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+---
+
+### When to Use API Routes vs Direct Database Access
+
+**Use API Routes when:**
+- Building a mobile app or external service that needs to consume your API
+- Need to expose endpoints for third-party integrations
+- Implementing webhooks or callbacks
+- Need client-side data fetching (forms, real-time updates)
+
+**Use Direct Database Access when:**
+- Fetching data for server components
+- Building internal pages that don't need external API access
+- Want better performance (no extra network hop)
+- Need to keep logic server-side only
+
+---
+
+## Supported HTTP Methods in API Routes
+
+API routes support the following HTTP methods:
+```tsx
+export async function GET(request: Request) { }
+export async function POST(request: Request) { }
+export async function PUT(request: Request) { }
+export async function PATCH(request: Request) { }
+export async function DELETE(request: Request) { }
+export async function HEAD(request: Request) { }
+export async function OPTIONS(request: Request) { }
+```
+
+---
+
+## API Route Response Examples
+
+### JSON Response
+```tsx
+return NextResponse.json({ message: 'Success' })
+```
+
+### Custom Status Code
+```tsx
+return NextResponse.json({ error: 'Not found' }, { status: 404 })
+```
+
+### Custom Headers
+```tsx
+return NextResponse.json(
+  { data: 'value' },
+  {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'public, max-age=3600'
+    }
+  }
+)
+```
+
+### Redirect
+```tsx
+import { NextResponse } from 'next/server'
+
+export async function GET() {
+  return NextResponse.redirect(new URL('/home', request.url))
+}
+```
+
+---
+
+## Caching in Next.js 16
+
+**Caching** means storing data temporarily so it can be reused instead of being refetched or rebuilt. In Next.js, caching happens **across multiple layers**.
+
+### Types of Cache
+
+1. **Browser Cache:** Saves static files locally
+2. **Server Cache:** Stores pre-rendered pages and API responses
+3. **Data Cache:** Remembers fetched data to avoid repeat requests
+
+**Result:** Makes your app feel **instant**
+
+---
+
+## New Caching Model in Next.js 16
+
+### Old vs New Approach
+
+**Old model:**
+- Separate settings: SSG, ISR, and PPR
+- Had to choose between SSR (Server-Side Rendering) or SSG (Static Site Generation)
+
+**New model (Next.js 16):**
+- SSG, ISR, and PPR still exist but are now just **outcomes** of how you define cache boundaries
+- **You no longer choose SSR or SSG**
+- Simply define **what gets cached** and Next.js handles the rest
+
+---
+
+## Enabling the New Caching System
+
+**File:** `next.config.ts`
+```typescript
+const nextConfig = {
+  cacheComponents: true  // Enable new caching model
+}
+
+export default nextConfig
+```
+
+---
+
+## Using `use cache` Directive
+
+Similar to `'use client'` or `'use server'`, you can mark routes, components, or functions with **`'use cache'`**.
+
+This tells Next.js to:
+- Store and reuse the output if inputs haven't changed
+- Pre-render at build time
+- Store in memory
+- Revalidate automatically every **15 minutes** by default
+
+### Cache Levels
+
+You can define `'use cache'` at:
+
+1. **File level**
+2. **Component level**
+3. **Function level**
+
+---
+
+### File-Level Cache
+
+**File:** `/app/blog/page.tsx`
+```tsx
+'use cache'
+
+export default async function BlogPage() {
+  const posts = await fetch('https://api.example.com/posts').then(res => res.json())
+  
+  return (
+    <div>
+      {posts.map(post => (
+        <article key={post.id}>
+          <h2>{post.title}</h2>
+          <p>{post.excerpt}</p>
+        </article>
+      ))}
+    </div>
+  )
+}
+```
+
+---
+
+### Component-Level Cache
+```tsx
+'use cache'
+
+async function ProductList() {
+  const products = await fetchProducts()
+  
+  return (
+    <ul>
+      {products.map(product => (
+        <li key={product.id}>{product.name}</li>
+      ))}
+    </ul>
+  )
+}
+
+export default function Page() {
+  return (
+    <div>
+      <h1>Products</h1>
+      <ProductList />
+    </div>
+  )
+}
+```
+
+---
+
+### Function-Level Cache
+```tsx
+'use cache'
+
+async function getUser(id: string) {
+  const user = await fetch(`https://api.example.com/users/${id}`).then(res => res.json())
+  return user
+}
+
+export default async function UserProfile({ userId }: { userId: string }) {
+  const user = await getUser(userId)
+  
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      <p>{user.email}</p>
+    </div>
+  )
+}
+```
+
+---
+
+## Fine-Tuning Cache with `cacheLife()`
+
+The **`cacheLife()`** method controls **how long data stays cached**.
+```tsx
+'use cache'
+
+import { cacheLife } from 'next/cache'
+
+export default async function Page() {
+  cacheLife('minutes')  // Built-in preset
+  
+  const data = await fetch('https://api.example.com/data').then(res => res.json())
+  
+  return <div>{data.content}</div>
+}
+```
+
+---
+
+### Built-in Cache Lifetimes
+```tsx
+cacheLife('seconds')   // Very short cache
+cacheLife('minutes')   // Short cache
+cacheLife('hours')     // Medium cache
+cacheLife('days')      // Long cache
+cacheLife('weeks')     // Very long cache
+cacheLife('max')       // Maximum cache duration
+```
+
+---
+
+### Custom Cache Lifetimes
+
+**File:** `next.config.ts`
+```typescript
+const nextConfig = {
+  cacheComponents: true,
+  cacheLife: {
+    blog: {
+      stale: 3600,        // 1 hour until stale
+      revalidate: 900,    // Revalidate every 15 minutes
+      expire: 86400,      // Expire after 24 hours
+    },
+    product: {
+      stale: 600,         // 10 minutes until stale
+      revalidate: 300,    // Revalidate every 5 minutes
+      expire: 3600,       // Expire after 1 hour
+    }
+  }
+}
+
+export default nextConfig
+```
+
+**Usage:**
+```tsx
+'use cache'
+
+import { cacheLife } from 'next/cache'
+
+export default async function BlogPage() {
+  cacheLife('blog')  // Use custom 'blog' cache lifetime
+  
+  const posts = await fetchPosts()
+  return <div>{/* ... */}</div>
+}
+```
+
+---
+
+## Cache Tags for Grouping
+
+**Cache tags** allow you to group cached items for easier invalidation.
+```tsx
+'use cache'
+
+import { cacheTag } from 'next/cache'
+
+export default async function ProductPage({ id }: { id: string }) {
+  cacheTag('products', `product-${id}`)
+  
+  const product = await fetchProduct(id)
+  
+  return (
+    <div>
+      <h1>{product.name}</h1>
+      <p>{product.description}</p>
+    </div>
+  )
+}
+```
+
+---
+
+## Cache Control Summary
+
+| Method | Controls | Purpose |
+|--------|----------|---------|
+| `cacheLife()` | **When to clear** | Define cache duration |
+| `cacheTag()` | **What to clear** | Group items for invalidation |
+
+---
+
+## Manual Cache Revalidation
+
+To refresh cached content instantly, use:
+
+### Revalidate by Path
+```tsx
+import { revalidatePath } from 'next/cache'
+
+export async function createPost(data: FormData) {
+  // Save post to database
+  await savePost(data)
+  
+  // Immediately refresh the /blog page cache
+  revalidatePath('/blog')
+}
+```
+
+---
+
+### Revalidate by Tag
+```tsx
+import { revalidateTag } from 'next/cache'
+
+export async function updateProduct(id: string, data: any) {
+  // Update product in database
+  await updateProductInDB(id, data)
+  
+  // Refresh all caches tagged with 'products'
+  revalidateTag('products')
+  
+  // Or refresh a specific product
+  revalidateTag(`product-${id}`)
+}
+```
+
+---
+
+## PPR (Partial Pre-Rendering)
+
+With the **`cacheComponents`** option enabled, you **don't need to set PPR to true**.
+
+### How it Works:
+- **Static parts** marked with `'use cache'` are pre-rendered automatically
+- **Dynamic parts** stream in with React Suspense
+- Best of both worlds: fast static content + dynamic updates
+
+**Example:**
+```tsx
+'use cache'
+
+import { Suspense } from 'react'
+
+// Static part - pre-rendered
+async function StaticContent() {
+  const data = await fetchStaticData()
+  return <div>{data.content}</div>
+}
+
+// Dynamic part - streams in
+async function DynamicContent() {
+  const liveData = await fetchLiveData()
+  return <div>{liveData.value}</div>
+}
+
+export default function Page() {
+  return (
+    <div>
+      <StaticContent />
+      <Suspense fallback={<div>Loading...</div>}>
+        <DynamicContent />
+      </Suspense>
+    </div>
+  )
+}
+```
+
+---
+
+## Build Adapters API (Alpha)
+
+Next.js 16 introduces the **Build Adapters API** which allows you to create custom adapters to modify the build process.
+
+### What Adapters Can Do:
+
+1. **Modify Next.js config** before build time
+2. **Transform the final build output**
+3. **Adjust how your app runs** depending on where it's hosted
+
+---
+
+### Supported Platforms:
+
+- ✅ Vercel
+- ✅ AWS
+- ✅ Cloudflare
+- ✅ Netlify
+- ✅ Your own server
+
+---
+
+### Benefits:
+
+| Benefit | Description |
+|---------|-------------|
+| 🚀 **Zero Config Deployments** | Deploy to any platform without manual configuration |
+| ⚡ **Environment-Specific Optimizations** | Automatically optimize for each hosting platform |
+| 🔓 **Freedom** | Not tied to just one provider (previously only Vercel) |
+
+---
+
+### Example Adapter Usage:
+
+**File:** `next.config.ts`
+```typescript
+import { createAdapter } from '@next/adapter-aws'
+
+const nextConfig = {
+  adapter: createAdapter({
+    runtime: 'nodejs',
+    region: 'us-east-1'
+  })
+}
+
+export default nextConfig
+```
+
+---
+
+## Metadata for SEO
+
+Next.js provides two ways to define **metadata** for Search Engine Optimization (SEO):
+
+1. **Config-based metadata**
+2. **File-based metadata**
+
+---
+
+## 1. Config-Based Metadata
+
+Create a JavaScript object in a **layout** or **page** file and export it. Next.js will automatically detect it and turn it into relevant meta tags.
+
+### Static Metadata
+
+**File:** `/app/layout.tsx`
+```tsx
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'My Website',
+  description: 'Welcome to my awesome website',
+  keywords: ['next.js', 'react', 'seo'],
+  authors: [{ name: 'John Doe' }],
+  openGraph: {
+    title: 'My Website',
+    description: 'Welcome to my awesome website',
+    url: 'https://example.com',
+    siteName: 'My Website',
+    images: [
+      {
+        url: 'https://example.com/og-image.jpg',
+        width: 1200,
+        height: 630,
+      }
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'My Website',
+    description: 'Welcome to my awesome website',
+    images: ['https://example.com/twitter-image.jpg'],
+  },
+}
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+---
+
+### Route-Specific Metadata
+
+**File:** `/app/about/page.tsx`
+```tsx
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'About Us',
+  description: 'Learn more about our company'
+}
+
+export default function AboutPage() {
+  return <div>About Us</div>
+}
+```
+
+**Priority:** Route-specific metadata **overrides** root layout metadata.
+
+---
+
+## Dynamic Metadata with `generateMetadata()`
+
+For **dynamic routes**, use the `generateMetadata()` function to create metadata based on route parameters.
+
+**File:** `/app/blog/[slug]/page.tsx`
+```tsx
+import type { Metadata } from 'next'
+
+interface Props {
+  params: Promise<{ slug: string }>
+}
+
+// Generate dynamic metadata
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params
+  
+  // Fetch post details based on slug
+  const post = await fetch(`https://api.example.com/posts/${slug}`).then(res => res.json())
+  
+  return {
+    title: post.title,
+    description: post.excerpt,
+    openGraph: {
+      title: post.title,
+      description: post.excerpt,
+      images: [post.coverImage],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: post.title,
+      description: post.excerpt,
+      images: [post.coverImage],
+    }
+  }
+}
+
+export default async function BlogPost({ params }: Props) {
+  const { slug } = await params
+  const post = await fetch(`https://api.example.com/posts/${slug}`).then(res => res.json())
+  
+  return (
+    <article>
+      <h1>{post.title}</h1>
+      <p>{post.content}</p>
+    </article>
+  )
+}
+```
+
+---
+
+## 2. File-Based Metadata
+
+Add special files inside the `/app` folder and Next.js will **automatically detect** and generate corresponding meta tags.
+
+### Supported Files:
+
+| File | Purpose | Tag Generated |
+|------|---------|---------------|
+| `favicon.ico` | Site favicon | `<link rel="icon">` |
+| `icon.png` / `icon.svg` | App icon | `<link rel="icon">` |
+| `apple-icon.png` | Apple touch icon | `<link rel="apple-touch-icon">` |
+| `opengraph-image.jpg` | Open Graph image | `<meta property="og:image">` |
+| `twitter-image.jpg` | Twitter card image | `<meta name="twitter:image">` |
+| `sitemap.xml` | Sitemap | Sitemap for search engines |
+| `robots.txt` | Robots file | Crawling instructions |
+
+---
+
+### Example Structure:
+```
+/app
+  favicon.ico
+  icon.svg
+  apple-icon.png
+  opengraph-image.jpg
+  twitter-image.jpg
+  sitemap.xml
+  robots.txt
+```
+
+Next.js will automatically:
+- Detect these files
+- Generate appropriate meta tags
+- Serve them at the correct paths
+
+---
+
+### Dynamic Open Graph Images
+
+You can also **generate** Open Graph images dynamically:
+
+**File:** `/app/opengraph-image.tsx`
+```tsx
+import { ImageResponse } from 'next/og'
+
+export const runtime = 'edge'
+
+export const alt = 'My Website'
+export const size = {
+  width: 1200,
+  height: 630,
+}
+export const contentType = 'image/png'
+
+export default async function Image() {
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          fontSize: 128,
+          background: 'linear-gradient(to right, #667eea, #764ba2)',
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white',
+        }}
+      >
+        My Website
+      </div>
+    ),
+    {
+      ...size,
+    }
+  )
+}
+```
+
+---
+
+## Metadata Priority
+
+**File-based metadata** has **higher priority** than **config-based metadata**.
+
+### Priority Order (Highest to Lowest):
+
+1. **File-based metadata** (`opengraph-image.jpg`, `favicon.ico`, etc.)
+2. **Route-specific metadata** (from `page.tsx` or `layout.tsx`)
+3. **Root layout metadata** (from `/app/layout.tsx`)
+
+**Example:**
+
+If you have both:
+- `/app/opengraph-image.jpg` (file-based)
+- `metadata.openGraph.images` in `/app/layout.tsx` (config-based)
+
+The **file-based** image will be used.
+
+---
+
+## Complete Metadata Example
+
+**File:** `/app/products/[id]/page.tsx`
+```tsx
+import type { Metadata } from 'next'
+
+interface Props {
+  params: Promise<{ id: string }>
+}
+
+// Dynamic metadata
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params
+  const product = await fetchProduct(id)
+  
+  return {
+    title: `${product.name} | My Store`,
+    description: product.description,
+    keywords: product.tags,
+    openGraph: {
+      title: product.name,
+      description: product.description,
+      images: [product.image],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: product.name,
+      description: product.description,
+      images: [product.image],
+    },
+    alternates: {
+      canonical: `https://mystore.com/products/${id}`,
+    }
+  }
+}
+
+export default async function ProductPage({ params }: Props) {
+  const { id } = await params
+  const product = await fetchProduct(id)
+  
+  return (
+    <div>
+      <h1>{product.name}</h1>
+      <p>{product.description}</p>
+      <p>${product.price}</p>
+    </div>
+  )
+}
+```
+
+---
+
 ## Server-Side Data Fetching Benefits Summary
 
 | Benefit | Description |
@@ -2302,6 +3363,8 @@ export default async function Posts() {
 | 🌊 **No Waterfalls** | Parallel requests instead of sequential |
 | 🗄️ **Direct DB Access** | Query databases directly without APIs |
 | 💾 **HMR Cache** | Cached responses during development (Next.js 16) |
+| 🎯 **Smart Caching** | `use cache` directive for granular control |
+| 🏗️ **Build Adapters** | Deploy anywhere with platform-specific optimizations |
 
 ---
 
@@ -2313,11 +3376,17 @@ Next.js uses special file naming conventions for different purposes:
 |-----------|---------|---------------|-------|
 | `page.tsx` | Route UI | Server/Client | Defines the UI for a route |
 | `layout.tsx` | Shared UI | Server/Client | Wraps child routes, persists across navigation |
+| `route.ts` | API Endpoint | Server | Handles HTTP requests (GET, POST, etc.) |
 | `error.tsx` | Error UI | **Client** | Catches and displays errors |
 | `loading.tsx` | Loading UI | Server/Client | Shows while content loads |
 | `unauthorized.tsx` | 401 Error | Server/Client | Custom unauthorized page (Next.js 16) |
 | `forbidden.tsx` | 403 Error | Server/Client | Custom forbidden page (Next.js 16) |
 | `global-error.tsx` | Global Error | **Client** | Catches errors not caught by other error boundaries |
+| `favicon.ico` | Favicon | Static | Site favicon |
+| `icon.svg` | App Icon | Static | App icon |
+| `opengraph-image.jpg` | OG Image | Static | Open Graph image |
+| `sitemap.xml` | Sitemap | Static | SEO sitemap |
+| `robots.txt` | Robots | Static | Crawler instructions |
 
 ---
 
@@ -2334,9 +3403,19 @@ Next.js 16 provides powerful features for modern web development:
 ✅ **Error handling** with `error.tsx`  
 ✅ **Loading states** with `loading.tsx`  
 ✅ **Unauthorized/Forbidden** pages for better UX  
+✅ **API Routes** for building backend endpoints  
 ✅ **Server-side data fetching** for better performance and SEO  
 ✅ **Automatic Request Deduplication** to prevent duplicate API calls  
 ✅ **Direct database access** in Server Components  
 ✅ **HMR Cache** for faster development experience  
+✅ **New caching model** with `'use cache'` directive  
+✅ **cacheLife()** for controlling cache duration  
+✅ **cacheTag()** for grouping cached items  
+✅ **revalidatePath()** and **revalidateTag()** for manual cache invalidation  
+✅ **PPR (Partial Pre-Rendering)** automatic with cache components  
+✅ **Build Adapters API** for platform-agnostic deployments  
+✅ **Config-based metadata** for SEO  
+✅ **Dynamic metadata** with `generateMetadata()`  
+✅ **File-based metadata** with automatic detection  
 
-All these features work together to create a fast, organized, SEO-friendly, and developer-friendly application with automatic optimizations.
+All these features work together to create a fast, organized, SEO-friendly, and developer-friendly application with automatic optimizations and flexible deployment options.
