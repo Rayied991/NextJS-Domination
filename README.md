@@ -1626,130 +1626,450 @@ Need browser interactivity? (onClick, useState, etc.)
 **Next.js Version:** 15.x  
 **React Version:** 19.x
 
+# Next.js 16 - Complete Routing & Layouts Guide
 
-```mermaid
-flowchart TD
-    Start([Creating a Component]) --> Question1{Does it need<br/>browser interactivity?}
-    
-    Question1 --> |YES| Interactive{What kind of<br/>interactivity?}
-    Question1 --> |NO| ServerComp[✅ Server Component<br/>DEFAULT - No directive needed]
-    
-    Interactive --> Events[Event Handlers<br/>onClick, onChange, onSubmit]
-    Interactive --> Hooks[React Hooks<br/>useState, useEffect, useContext]
-    Interactive --> Browser[Browser APIs<br/>localStorage, window, document]
-    
-    Events --> ClientComp[✅ Client Component<br/>Add 'use client' at top]
-    Hooks --> ClientComp
-    Browser --> ClientComp
-    
-    ServerComp --> ServerBenefits[Benefits:<br/>✓ Smaller bundle size<br/>✓ Access databases directly<br/>✓ Read file system<br/>✓ Keep secrets secure<br/>✓ Better SEO]
-    
-    ClientComp --> ClientBenefits[Benefits:<br/>✓ Interactive UI<br/>✓ Use React hooks<br/>✓ Handle user events<br/>✓ Access browser APIs<br/>✓ Real-time updates]
-    
-    ServerBenefits --> ServerExamples[Examples:<br/>• Fetching data from DB<br/>• Reading server files<br/>• Static content<br/>• Blog posts<br/>• Product listings]
-    
-    ClientBenefits --> ClientExamples[Examples:<br/>• Forms with validation<br/>• Search with autocomplete<br/>• Shopping cart<br/>• Interactive charts<br/>• Real-time chat]
-    
-    ServerExamples --> Tip[💡 TIP: Start with Server Component<br/>Switch to Client Component only when needed]
-    ClientExamples --> Tip
-    
-    Tip --> End([Component Created!])
-    
-    style Start fill:#e1f5e1
-    style End fill:#e1f5e1
-    style ServerComp fill:#ffe1e1
-    style ClientComp fill:#e1e1ff
-    style Tip fill:#fff3cd
+## React Compiler Support (Stable)
+
+Next.js 16 introduces built-in integration for **automatic memoization** using the React Compiler. This eliminates the need for manual `useMemo` and `useCallback` hooks.
+
+### How It Works
+- Automatically memoizes components to reduce unnecessary re-renders
+- Analyzes code at build time and optimizes rendering behavior
+- No manual optimization required
+
+### Setup
+
+**Install the plugin:**
+```bash
+npm install babel-plugin-react-compiler@latest
 ```
 
-```mermaid
-graph TB
-    subgraph "Next.js Rendering Strategies"
-        Start([Choose Rendering Strategy]) --> Decision{Content Type?}
-        
-        Decision --> Static{Rarely changes?<br/>Can pre-build?}
-        Decision --> Dynamic{Changes frequently?<br/>User-specific?}
-        Decision --> SemiStatic{Updates occasionally?<br/>After deployment?}
-        Decision --> Interactive{Highly interactive?<br/>Real-time?}
-        
-        Static --> SSG[SSG - Static Site Generation]
-        Dynamic --> SSR[SSR - Server-Side Rendering]
-        SemiStatic --> ISR[ISR - Incremental Static Regeneration]
-        Interactive --> CSR[CSR - Client-Side Rendering]
-    end
-    
-    subgraph "SSG Details"
-        SSG --> SSG1[When: Build Time]
-        SSG1 --> SSG2[How: Pre-render all pages]
-        SSG2 --> SSG3[Cache: Forever until rebuild]
-        SSG3 --> SSG4[Use Cases:<br/>• Blogs<br/>• Documentation<br/>• Marketing pages<br/>• Landing pages]
-        SSG4 --> SSG5[Code Example:<br/>cache: 'force-cache']
-        SSG5 --> SSGPros[Pros: ⚡ Fastest<br/>✓ Best SEO<br/>✓ CDN cacheable]
-        SSGPros --> SSGCons[Cons: ⚠️ No dynamic data<br/>⚠️ Must rebuild for updates]
-    end
-    
-    subgraph "SSR Details"
-        SSR --> SSR1[When: Every Request]
-        SSR1 --> SSR2[How: Server renders on demand]
-        SSR2 --> SSR3[Cache: None or short-lived]
-        SSR3 --> SSR4[Use Cases:<br/>• Dashboards<br/>• User profiles<br/>• Personalized content<br/>• News feeds]
-        SSR4 --> SSR5[Code Example:<br/>cache: 'no-store']
-        SSR5 --> SSRPros[Pros: ✓ Always fresh<br/>✓ User-specific<br/>✓ SEO-friendly]
-        SSRPros --> SSRCons[Cons: ⚠️ Slower TTFB<br/>⚠️ Server load]
-    end
-    
-    subgraph "ISR Details"
-        ISR --> ISR1[When: Build + Background Updates]
-        ISR1 --> ISR2[How: Regenerate after interval]
-        ISR2 --> ISR3[Cache: Until revalidation time]
-        ISR3 --> ISR4[Use Cases:<br/>• E-commerce products<br/>• News sites<br/>• Social media feeds<br/>• Updated content]
-        ISR4 --> ISR5[Code Example:<br/>revalidate: 3600]
-        ISR5 --> ISRPros[Pros: ✓ Best of both worlds<br/>✓ Fast + Fresh<br/>✓ CDN cacheable]
-        ISRPros --> ISRCons[Cons: ⚠️ Slightly stale data<br/>⚠️ More complex]
-    end
-    
-    subgraph "CSR Details"
-        CSR --> CSR1[When: In Browser]
-        CSR1 --> CSR2[How: JavaScript renders]
-        CSR2 --> CSR3[Cache: Handled by client]
-        CSR3 --> CSR4[Use Cases:<br/>• Interactive dashboards<br/>• Real-time apps<br/>• Charts/graphs<br/>• Client-only features]
-        CSR4 --> CSR5[Code Example:<br/>'use client' + useEffect]
-        CSR5 --> CSRPros[Pros: ✓ Highly interactive<br/>✓ Real-time updates<br/>✓ Rich UX]
-        CSRPros --> CSRCons[Cons: ⚠️ Poor SEO<br/>⚠️ Slower initial load<br/>⚠️ Large bundle]
-    end
-    
-    SSGCons --> Compare[Compare Performance]
-    SSRCons --> Compare
-    ISRCons --> Compare
-    CSRCons --> Compare
-    
-    Compare --> Metrics{Performance Metrics}
-    
-    Metrics --> Speed[Speed Ranking:<br/>1️⃣ SSG Fastest<br/>2️⃣ ISR Fast<br/>3️⃣ SSR Medium<br/>4️⃣ CSR Slowest initial]
-    
-    Metrics --> SEO[SEO Ranking:<br/>1️⃣ SSG/ISR Best<br/>2️⃣ SSR Good<br/>3️⃣ CSR Poor]
-    
-    Metrics --> Fresh[Freshness Ranking:<br/>1️⃣ SSR Always fresh<br/>2️⃣ CSR Real-time<br/>3️⃣ ISR Periodic<br/>4️⃣ SSG Stale until rebuild]
-    
-    Speed --> Recommendation
-    SEO --> Recommendation
-    Fresh --> Recommendation
-    
-    Recommendation{💡 Best Practice}
-    
-    Recommendation --> Hybrid[Use Hybrid Approach:<br/>SSG for static pages<br/>ISR for semi-dynamic<br/>SSR for user-specific<br/>CSR for interactive parts]
-    
-    Hybrid --> Example[Example App:<br/>• Homepage → SSG<br/>• Product pages → ISR<br/>• User dashboard → SSR<br/>• Live chat widget → CSR]
-    
-    Example --> End([Choose Based on Needs])
-    
-    style Start fill:#e1f5e1
-    style End fill:#e1f5e1
-    style SSG fill:#d4edda
-    style SSR fill:#fff3cd
-    style ISR fill:#cfe2ff
-    style CSR fill:#f8d7da
-    style Hybrid fill:#e1f5e1
+**Enable in `next.config.ts`:**
+```typescript
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  reactCompiler: true, // Enable React Compiler
+  experimental: {
+    turbopackFileSystemCacheForDev: true,
+  }
+};
+
+export default nextConfig;
 ```
 
+---
 
+## File-Based Routing
+
+Next.js uses **file-based routing** where pages and layouts exist within the `/app` folder. Components that are not pages should be placed in a separate `/components` folder outside `/app`.
+
+### Basic Route Example
+
+**File:** `/app/about/page.tsx`
+```tsx
+const Page = () => {
+  return (
+    <div>
+      <h1>About</h1>
+    </div>
+  );
+};
+
+export default Page;
+```
+
+**URL:** `localhost:3000/about`
+
+### Key Differences
+- **React:** Uses React Router
+- **Next.js:** Uses file-based routing where folder names become route names
+- `page.tsx` is a special file that renders the UI for that route
+
+---
+
+## Nested Routes
+
+For routes like `/dashboard/users` and `/dashboard/analytics`, use **nested folders**.
+
+**File:** `/app/dashboard/users/page.tsx`
+```tsx
+const Users = () => {
+  return (
+    <div>
+      <h1>Dashboard Users</h1>
+      
+      <ul className="mt-10">
+        <li>User-1</li>
+        <li>User-2</li>
+        <li>User-3</li>
+        <li>User-4</li>
+      </ul>
+    </div>
+  );
+};
+
+export default Users;
+```
+
+**File:** `/app/dashboard/analytics/page.tsx`
+```tsx
+const Analytics = () => {
+  return (
+    <div>
+      <h1>Analytics Page</h1>
+    </div>
+  );
+};
+
+export default Analytics;
+```
+
+---
+
+## Dynamic Routes
+
+Dynamic routes allow parts of the URL to change based on user input or data. To create a dynamic route, wrap the changing part in **square brackets**.
+
+### Example: User Details
+
+**File:** `/app/dashboard/users/[id]/page.tsx`
+```tsx
+const UserDetails = async ({ params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
+  
+  return (
+    <div>
+      <h1>Showing details for user #{id}</h1>
+    </div>
+  );
+};
+
+export default UserDetails;
+```
+
+**URLs:**
+- `dashboard/users/user1`
+- `dashboard/users/user2`
+- `dashboard/users/user3`
+
+### Page Params
+The value in `[id]` gets populated in the `params` object, which you can access in your component.
+
+---
+
+## Layouts
+
+Layouts allow you to share UI elements (like navbars and footers) across multiple pages.
+
+### Root Layout
+
+**File:** `/app/layout.tsx`
+```tsx
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: "Welcome to Next.js!",
+  description: "Check out Next.js for more",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        Navbar
+        {children}
+        Footer
+      </body>
+    </html>
+  );
+}
+```
+
+### Nested Layout (Dashboard)
+
+**File:** `/app/dashboard/layout.tsx`
+```tsx
+const Layout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div>
+      <p>Dashboard Navbar</p>
+      {children}
+    </div>
+  );
+};
+
+export default Layout;
+```
+
+**Important:** Name nested layouts as `layout.tsx` (same as root layout) so Next.js can recognize them.
+
+---
+
+## Route Groups
+
+Route Groups allow you to organize route segments and project structure **without impacting the URL path**. This is useful when you want separate layouts for different sections of your app.
+
+### Use Case
+You want different navbars for dashboard and non-dashboard routes, but don't want the root layout to appear in dashboard routes.
+
+### How It Works
+Wrap folder names in **parentheses** `()` to create route groups that won't show up in the URL.
+
+**Structure:**
+```
+/app/(dashboard)  → All dashboard-related routes
+/app/(root)       → Non-dashboard routes
+```
+
+### Example: Separate Layouts
+
+**File:** `/app/(root)/layout.tsx`
+```tsx
+const Layout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div>
+      <p>Navbar</p>
+      {children}
+    </div>
+  );
+};
+
+export default Layout;
+```
+
+**File:** `/app/(dashboard)/layout.tsx`
+```tsx
+const Layout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div>
+      <p>Dashboard Navbar</p>
+      {children}
+    </div>
+  );
+};
+
+export default Layout;
+```
+
+### Next.js 16 Enhancement: Layout Deduplication
+
+**Optimized navigations and prefetching** with layout deduplication and incremental prefetching make transitions much faster.
+
+**How it works:**
+- When prefetching multiple URLs that share the same layout, the layout is downloaded **only once** instead of per link
+- This optimization happens **automatically** with no code changes required
+- This is the **biggest update** in Next.js 16 routing
+
+---
+
+## Error Handling
+
+Next.js provides a special **`error.tsx`** file to catch errors and display them in a custom UI.
+
+### Creating an Error Boundary
+
+Similar to layouts, you can create multiple `error.tsx` files for different routes or route groups.
+
+**Example: Throwing an Error**
+
+**File:** `/app/(root)/about/page.tsx`
+```tsx
+const Page = () => {
+  throw new Error("Not implemented");
+  
+  return (
+    <div>
+      <h1>About Page</h1>
+    </div>
+  );
+};
+
+export default Page;
+```
+
+### Custom Error UI
+
+Instead of seeing the default error screen, create a custom error UI.
+
+**File:** `/app/(root)/error.tsx`
+```tsx
+'use client' // Error boundaries must be Client Components
+ 
+import { useEffect } from 'react'
+ 
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) {
+  useEffect(() => {
+    // Log the error to an error reporting service
+    console.error(error)
+  }, [error])
+ 
+  return (
+    <div>
+      <h2>Something went wrong!</h2>
+      <button
+        onClick={() => reset()} // Attempt to recover by re-rendering
+      >
+        Try again
+      </button>
+    </div>
+  )
+}
+```
+
+### Important Notes
+- **Error files must be Client Components** (`'use client'`)
+- Only the **closest error file** to the route takes priority
+- Unlike `layout.tsx` which displays everything from its parent, the error file works differently
+- You won't see content from both `global-error.tsx` and route-specific `error.tsx`
+- Errors **bubble up** to the nearest parent error file, not all of them
+
+### Global Error Handling
+
+**File:** `/app/global-error.tsx`
+```tsx
+'use client'
+
+export default function GlobalError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) {
+  return (
+    <html>
+      <body>
+        <h2>Something went wrong globally!</h2>
+        <button onClick={() => reset()}>Try again</button>
+      </body>
+    </html>
+  )
+}
+```
+
+---
+
+## Loading UI
+
+The **`loading.tsx`** file shows a loading progress indicator while data is being fetched. This is especially useful for users with slow internet connections.
+
+### How It Works
+- Works very similarly to error handling
+- Shows loading progress while data is being fetched
+- As simple as adding a new `loading.tsx` file within the app
+
+### How to Create a Loading UI
+
+**File:** `/app/loading.tsx` or `/app/(dashboard)/loading.tsx`
+```tsx
+export default function Loading() {
+  return (
+    <div>
+      <p>Loading...</p>
+      {/* Add your spinner or skeleton UI here */}
+    </div>
+  );
+}
+```
+
+### Benefits
+- Automatically displays while the page is loading
+- Can be placed at different route levels for granular control
+- Improves user experience during data fetching
+
+---
+
+## Next.js 16: Unauthorized & Forbidden Files
+
+Next.js 16 introduces special **`unauthorized.tsx`** and **`forbidden.tsx`** files that work similarly to `loading.tsx`.
+
+### Unauthorized File
+
+**File:** `/app/unauthorized.tsx`
+```tsx
+export default function Unauthorized() {
+  return (
+    <div>
+      <h1>401 - Unauthorized</h1>
+      <p>You need to log in to access this page.</p>
+    </div>
+  );
+}
+```
+
+### Forbidden File
+
+**File:** `/app/forbidden.tsx`
+```tsx
+export default function Forbidden() {
+  return (
+    <div>
+      <h1>403 - Forbidden</h1>
+      <p>You don't have permission to access this resource.</p>
+    </div>
+  );
+}
+```
+
+### Use Cases
+- Display custom UI for authentication errors (401)
+- Show permission-denied messages (403)
+- Improve user experience with proper error messaging
+- Work similarly to loading UI
+
+---
+
+## Summary of Special Files
+
+Next.js uses special file naming conventions for different purposes:
+
+| File Name | Purpose | Client/Server | Notes |
+|-----------|---------|---------------|-------|
+| `page.tsx` | Route UI | Server/Client | Defines the UI for a route |
+| `layout.tsx` | Shared UI | Server/Client | Wraps child routes, persists across navigation |
+| `error.tsx` | Error UI | **Client** | Catches and displays errors |
+| `loading.tsx` | Loading UI | Server/Client | Shows while content loads |
+| `unauthorized.tsx` | 401 Error | Server/Client | Custom unauthorized page (Next.js 16) |
+| `forbidden.tsx` | 403 Error | Server/Client | Custom forbidden page (Next.js 16) |
+| `global-error.tsx` | Global Error | **Client** | Catches errors not caught by other error boundaries |
+
+---
+
+## Summary
+
+Next.js 16 provides powerful routing features:
+
+✅ **React Compiler** for automatic optimization  
+✅ **File-based routing** with nested routes  
+✅ **Dynamic routes** using `[param]` syntax  
+✅ **Layouts** for shared UI elements  
+✅ **Route Groups** `(folder)` for organization without URL impact  
+✅ **Layout Deduplication** for faster navigation (biggest update!)  
+✅ **Error handling** with `error.tsx`  
+✅ **Loading states** with `loading.tsx`  
+✅ **Unauthorized/Forbidden** pages for better UX (New in Next.js 16!)  
+
+All these features work together to create a fast, organized, and user-friendly application structure with automatic optimizations.
